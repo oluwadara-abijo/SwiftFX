@@ -51,12 +51,16 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.dara.swiftfx.R
 import com.dara.swiftfx.ui.theme.BlueText
 import com.dara.swiftfx.ui.theme.GreenAccent
 
 @Composable
 fun ConversionScreen(modifier: Modifier) {
+    val viewModel = hiltViewModel<ConversionViewModel>()
+    val uiState by viewModel.uiState
+
     val time = remember { System.currentTimeMillis().toString().substring(1..4) }
 
     Column(
@@ -69,8 +73,11 @@ fun ConversionScreen(modifier: Modifier) {
     ) {
         Toolbar()
         HeaderText()
-        AmountColumn()
-        CurrencyRow()
+        AmountColumn(uiState.selectedCurrencyFrom, uiState.selectedCurrencyTo)
+        CurrencyRow(
+            currencies = uiState.currencies,
+            onCurrencyFromSelected = { viewModel.updateCurrencyFrom(it) },
+            onCurrencyToSelected = { viewModel.updateCurrencyTo(it) })
         Button(
             modifier = Modifier
                 .fillMaxWidth()
@@ -147,21 +154,26 @@ fun HeaderText() {
 }
 
 @Composable
-fun AmountColumn() {
+fun AmountColumn(
+    currencyFrom: String,
+    currencyTo: String
+) {
     Column(
         Modifier
             .fillMaxWidth()
             .padding(top = 32.dp)
     ) {
-        AmountTextField(currency = "EUR", isReadOnly = false)
+        AmountTextField(currency = currencyFrom, isReadOnly = false)
         Spacer(Modifier.height(16.dp))
-        AmountTextField(currency = "PLN", isReadOnly = true)
+        AmountTextField(currency = currencyTo, isReadOnly = true)
     }
 }
 
 @Composable
 fun CurrencyRow(
-    currencies: List<String> = listOf("USD", "EUR", "GBP", "JPY", "AUD", "NGN")
+    currencies: List<String>,
+    onCurrencyFromSelected: (String) -> Unit,
+    onCurrencyToSelected: (String) -> Unit
 ) {
     val sortedCurrencies = currencies.sorted()
     Row(
@@ -172,7 +184,10 @@ fun CurrencyRow(
         verticalAlignment = CenterVertically
     ) {
         Box(modifier = Modifier.weight(1f)) {
-            CurrencySpinner(currencies = sortedCurrencies)
+            CurrencySpinner(
+                currencies = sortedCurrencies,
+                onCurrencySelected = onCurrencyFromSelected
+            )
         }
         Icon(
             modifier = Modifier.padding(horizontal = 8.dp),
@@ -180,7 +195,10 @@ fun CurrencyRow(
             contentDescription = null
         )
         Box(modifier = Modifier.weight(1f)) {
-            CurrencySpinner(sortedCurrencies)
+            CurrencySpinner(
+                sortedCurrencies,
+                onCurrencySelected = onCurrencyToSelected
+            )
         }
     }
 }
@@ -189,10 +207,9 @@ fun CurrencyRow(
 @Composable
 fun CurrencySpinner(
     currencies: List<String>,
-    onCurrencySelected: (String) -> Unit = {}
+    onCurrencySelected: (String) -> Unit
 ) {
-    require(currencies.isNotEmpty()) { "Currencies list cannot be empty" }
-    var selectedCurrency by remember { mutableStateOf(currencies[0]) }
+    var selectedCurrency by remember { mutableStateOf("") }
     var isDropdownExpanded by remember { mutableStateOf(false) }
 
     Column {
