@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -39,6 +40,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
@@ -63,51 +65,57 @@ fun ConversionScreen(modifier: Modifier) {
 
     val time = remember { System.currentTimeMillis().toString().substring(1..4) }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .scrollable(
-                rememberScrollState(),
-                orientation = Orientation.Vertical,
-            )
-    ) {
-        Toolbar()
-        HeaderText()
-        AmountColumn(uiState.selectedCurrencyFrom, uiState.selectedCurrencyTo)
-        CurrencyRow(
-            currencies = uiState.currencies,
-            onCurrencyFromSelected = { viewModel.updateCurrencyFrom(it) },
-            onCurrencyToSelected = { viewModel.updateCurrencyTo(it) })
-        Button(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 32.dp),
-            onClick = {},
-            shape = RoundedCornerShape(8.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = GreenAccent)
+    Box(Modifier.fillMaxWidth()) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .scrollable(
+                    rememberScrollState(),
+                    orientation = Orientation.Vertical,
+                )
+                .alpha(if (uiState.isLoading) 0.5f else 1f)
         ) {
-            Text(stringResource(R.string.convert))
+            Toolbar()
+            HeaderText()
+            AmountColumn(uiState.selectedCurrencyFrom, uiState.selectedCurrencyTo)
+            CurrencyRow(
+                currencies = uiState.currencies,
+                onCurrencyFromSelected = { viewModel.updateCurrencyFrom(it) },
+                onCurrencyToSelected = { viewModel.updateCurrencyTo(it) })
+            Button(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 32.dp),
+                onClick = {},
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = GreenAccent)
+            ) {
+                Text(stringResource(R.string.convert))
+            }
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp),
+                verticalAlignment = CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Text(
+                    text = stringResource(R.string.mid_market_exchange_rate, time),
+                    color = BlueText,
+                    textDecoration = TextDecoration.Underline,
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(Modifier.width(8.dp))
+                Icon(Icons.Default.Info, contentDescription = null, tint = LightGray)
+            }
         }
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp),
-            verticalAlignment = CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = stringResource(R.string.mid_market_exchange_rate, time),
-                color = BlueText,
-                textDecoration = TextDecoration.Underline,
-                textAlign = TextAlign.Center,
-                style = MaterialTheme.typography.bodyMedium
+        if (uiState.isLoading) {
+            CircularProgressIndicator(
+                modifier = Modifier.align(Alignment.Center)
             )
-            Spacer(Modifier.width(8.dp))
-            Icon(Icons.Default.Info, contentDescription = null, tint = LightGray)
         }
-
     }
-
 }
 
 @Composable
