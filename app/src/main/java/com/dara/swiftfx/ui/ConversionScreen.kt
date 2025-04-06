@@ -1,6 +1,7 @@
 package com.dara.swiftfx.ui
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
@@ -41,8 +42,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Color.Companion.Gray
 import androidx.compose.ui.graphics.Color.Companion.LightGray
@@ -57,13 +56,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.dara.swiftfx.R
 import com.dara.swiftfx.ui.theme.BlueText
 import com.dara.swiftfx.ui.theme.GreenAccent
+import com.dara.swiftfx.utils.formatTimestamp
 
 @Composable
 fun ConversionScreen(modifier: Modifier) {
     val viewModel = hiltViewModel<ConversionViewModel>()
     val uiState by viewModel.uiState
-
-    val time = remember { System.currentTimeMillis().toString().substring(1..4) }
 
     Box(Modifier.fillMaxWidth()) {
         Column(
@@ -77,37 +75,51 @@ fun ConversionScreen(modifier: Modifier) {
         ) {
             Toolbar()
             HeaderText()
-            AmountColumn(uiState.selectedCurrencyFrom, uiState.selectedCurrencyTo)
+            AmountColumn(
+                currencyFrom = uiState.selectedCurrencyFrom,
+                currencyTo = uiState.selectedCurrencyTo,
+                amountTo = uiState.amountTo,
+                onAmountFromChanged = { viewModel.updateAmountFrom(it) },
+            )
             CurrencyRow(
                 currencies = uiState.currencies,
-                onCurrencyFromSelected = { viewModel.updateCurrencyFrom(it) },
                 onCurrencyToSelected = { viewModel.updateCurrencyTo(it) })
             Button(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 32.dp),
-                onClick = {},
+                onClick = {
+                    viewModel.getExchangeRate(
+                        uiState.selectedCurrencyFrom,
+                        uiState.selectedCurrencyTo
+                    )
+                },
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = GreenAccent)
             ) {
                 Text(stringResource(R.string.convert))
             }
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(top = 16.dp),
-                verticalAlignment = CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Text(
-                    text = stringResource(R.string.mid_market_exchange_rate, time),
-                    color = BlueText,
-                    textDecoration = TextDecoration.Underline,
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-                Spacer(Modifier.width(8.dp))
-                Icon(Icons.Default.Info, contentDescription = null, tint = LightGray)
+            if (uiState.timestamp != null) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(top = 16.dp),
+                    verticalAlignment = CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = stringResource(
+                            R.string.mid_market_exchange_rate,
+                            formatTimestamp(uiState.timestamp)
+                        ),
+                        color = BlueText,
+                        textDecoration = TextDecoration.Underline,
+                        textAlign = TextAlign.Center,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Icon(Icons.Default.Info, contentDescription = null, tint = LightGray)
+                }
             }
         }
         if (uiState.isLoading) {
@@ -164,23 +176,74 @@ fun HeaderText() {
 @Composable
 fun AmountColumn(
     currencyFrom: String,
-    currencyTo: String
+    currencyTo: String,
+    amountTo: String,
+    onAmountFromChanged: (String) -> Unit,
 ) {
     Column(
         Modifier
             .fillMaxWidth()
             .padding(top = 32.dp)
     ) {
-        AmountTextField(currency = currencyFrom, isReadOnly = false)
+        AmountFromTextField(
+            currency = currencyFrom,
+            onAmountChanged = onAmountFromChanged
+        )
         Spacer(Modifier.height(16.dp))
-        AmountTextField(currency = currencyTo, isReadOnly = true)
+        AmountToTextField(
+            amount = amountTo,
+            currency = currencyTo,
+        )
+    }
+}
+
+@Composable
+private fun AmountFromTextField(
+    currency: String,
+    onAmountChanged: (String) -> Unit,
+) {
+    var amount by remember { mutableStateOf("") }
+    OutlinedTextField(
+        modifier = Modifier
+            .fillMaxWidth(),
+        value = amount,
+        onValueChange = {
+            amount = it
+            onAmountChanged(it)
+        },
+        trailingIcon = { Text(currency, color = Gray) },
+        singleLine = true,
+        placeholder = { Text("0") },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedContainerColor = Gray.copy(alpha = 0.2f),
+            unfocusedContainerColor = Gray.copy(alpha = 0.2f),
+            unfocusedBorderColor = Color.Transparent,
+            focusedBorderColor = Color.Transparent
+        ),
+        shape = RoundedCornerShape(8.dp)
+    )
+}
+
+@Composable
+fun AmountToTextField(amount: String, currency: String) {
+    Row(
+        modifier = Modifier
+            .background(
+                color = Gray.copy(alpha = 0.2f), shape = RoundedCornerShape(8.dp)
+            )
+            .padding(12.dp)
+            .fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(amount)
+        Text(currency, color = Gray)
     }
 }
 
 @Composable
 fun CurrencyRow(
     currencies: List<String>,
-    onCurrencyFromSelected: (String) -> Unit,
     onCurrencyToSelected: (String) -> Unit
 ) {
     val sortedCurrencies = currencies.sorted()
@@ -194,7 +257,8 @@ fun CurrencyRow(
         Box(modifier = Modifier.weight(1f)) {
             CurrencySpinner(
                 currencies = sortedCurrencies,
-                onCurrencySelected = onCurrencyFromSelected
+                onCurrencySelected = {},
+                isBaseCurrency = true
             )
         }
         Icon(
@@ -205,7 +269,8 @@ fun CurrencyRow(
         Box(modifier = Modifier.weight(1f)) {
             CurrencySpinner(
                 sortedCurrencies,
-                onCurrencySelected = onCurrencyToSelected
+                onCurrencySelected = onCurrencyToSelected,
+                isBaseCurrency = false
             )
         }
     }
@@ -215,7 +280,8 @@ fun CurrencyRow(
 @Composable
 fun CurrencySpinner(
     currencies: List<String>,
-    onCurrencySelected: (String) -> Unit
+    onCurrencySelected: (String) -> Unit,
+    isBaseCurrency: Boolean,
 ) {
     var selectedCurrency by remember { mutableStateOf("") }
     var isDropdownExpanded by remember { mutableStateOf(false) }
@@ -227,7 +293,7 @@ fun CurrencySpinner(
             OutlinedTextField(
                 modifier = Modifier
                     .menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
-                value = selectedCurrency,
+                value = if (isBaseCurrency) "EUR" else selectedCurrency,
                 onValueChange = { },
                 readOnly = true,
                 leadingIcon = {
@@ -237,58 +303,36 @@ fun CurrencySpinner(
                     )
                 },
                 trailingIcon = {
-                    if (isDropdownExpanded) Icon(
-                        painterResource(R.drawable.ic_expand_less),
-                        contentDescription = null
-                    ) else {
-                        Icon(
-                            painterResource(R.drawable.ic_expand_more),
+                    if (!isBaseCurrency) {
+                        if (isDropdownExpanded) Icon(
+                            painterResource(R.drawable.ic_expand_less),
                             contentDescription = null
-                        )
+                        ) else {
+                            Icon(
+                                painterResource(R.drawable.ic_expand_more),
+                                contentDescription = null
+                            )
+                        }
                     }
                 }
 
             )
-            ExposedDropdownMenu(
-                expanded = isDropdownExpanded,
-                onDismissRequest = { isDropdownExpanded = false }) {
-                currencies.forEach { currency ->
-                    DropdownMenuItem(
-                        text = { Text(currency) },
-                        onClick = {
-                            selectedCurrency = currency
-                            isDropdownExpanded = false
-                            onCurrencySelected(currency)
-                        })
+            if (!isBaseCurrency)
+                ExposedDropdownMenu(
+                    expanded = isDropdownExpanded,
+                    onDismissRequest = { isDropdownExpanded = false }) {
+                    currencies.forEach { currency ->
+                        DropdownMenuItem(
+                            text = { Text(currency) },
+                            onClick = {
+                                selectedCurrency = currency
+                                isDropdownExpanded = false
+                                onCurrencySelected(currency)
+                            })
+                    }
                 }
-            }
         }
     }
-}
-
-@Composable
-private fun AmountTextField(currency: String, isReadOnly: Boolean) {
-    val focusRequester = remember { FocusRequester() }
-    var amount by remember { mutableStateOf("") }
-    OutlinedTextField(
-        modifier = Modifier
-            .focusRequester(focusRequester)
-            .fillMaxWidth(),
-        value = amount,
-        onValueChange = { amount = it },
-        readOnly = isReadOnly,
-        trailingIcon = { Text(currency, color = Gray) },
-        singleLine = true,
-        placeholder = { Text("0") },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedContainerColor = Gray.copy(alpha = 0.2f),
-            unfocusedContainerColor = Gray.copy(alpha = 0.2f),
-            unfocusedBorderColor = Color.Transparent,
-            focusedBorderColor = Color.Transparent
-        ),
-        shape = RoundedCornerShape(8.dp)
-    )
 }
 
 @Preview(showBackground = true)
