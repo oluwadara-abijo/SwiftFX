@@ -1,5 +1,6 @@
 package com.dara.swiftfx.ui
 
+import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.Orientation
@@ -45,6 +46,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Color.Companion.Gray
 import androidx.compose.ui.graphics.Color.Companion.LightGray
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
@@ -62,6 +64,7 @@ import com.dara.swiftfx.utils.formatTimestamp
 fun ConversionScreen(modifier: Modifier) {
     val viewModel = hiltViewModel<ConversionViewModel>()
     val uiState by viewModel.uiState
+    val context = LocalContext.current
 
     Box(Modifier.fillMaxWidth()) {
         Column(
@@ -88,11 +91,17 @@ fun ConversionScreen(modifier: Modifier) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 32.dp),
+                enabled = (uiState.amountFrom.isNotBlank() && uiState.selectedCurrencyTo.isNotBlank()),
                 onClick = {
-                    viewModel.getExchangeRate(
-                        uiState.selectedCurrencyFrom,
-                        uiState.selectedCurrencyTo
-                    )
+                    val (isValid, errorMessage) = isValidAmount(uiState.amountFrom)
+                    if (isValid) {
+                        viewModel.getExchangeRate(
+                            uiState.selectedCurrencyFrom,
+                            uiState.selectedCurrencyTo
+                        )
+                    } else {
+                        Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+                    }
                 },
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = GreenAccent)
@@ -332,6 +341,14 @@ fun CurrencySpinner(
                     }
                 }
         }
+    }
+}
+
+fun isValidAmount(amountFrom: String): Pair<Boolean, String> {
+    return when {
+        amountFrom == "0" -> Pair(false, "Amount cannot be zero")
+        amountFrom.toFloatOrNull() == null -> Pair(false, "Please enter a valid amount")
+        else -> Pair(true, "")
     }
 }
 
