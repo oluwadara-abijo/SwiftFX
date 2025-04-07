@@ -136,6 +136,9 @@ fun ConversionScreen(modifier: Modifier) {
                 modifier = Modifier.align(Alignment.Center)
             )
         }
+        if (!uiState.errorMessage.isNullOrBlank()) {
+            Toast.makeText(context, uiState.errorMessage, Toast.LENGTH_SHORT).show()
+        }
     }
 }
 
