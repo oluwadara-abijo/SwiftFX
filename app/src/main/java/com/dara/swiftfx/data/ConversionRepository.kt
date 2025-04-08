@@ -17,13 +17,9 @@ class ConversionRepository @Inject constructor(private val fixerApi: FixerApi) {
                     Result.success(symbols)
                 }
                 // Handle FixerApi error response
-                serverResponse.error != null -> {
-                    Result.failure(Exception(serverResponse.error.info))
-                }
+                serverResponse.error != null -> Result.failure(Exception(serverResponse.error.info))
+                else -> Result.failure(Exception())
 
-                else -> {
-                    Result.failure(Exception())
-                }
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -34,7 +30,11 @@ class ConversionRepository @Inject constructor(private val fixerApi: FixerApi) {
         return try {
             // Get server response
             val serverResponse = fixerApi.getExchangeRate(base, symbols)
-            Result.success(serverResponse)
+            when {
+                !serverResponse.rates.isNullOrEmpty() -> Result.success(serverResponse)
+                serverResponse.error != null -> Result.failure(Exception(serverResponse.error.info))
+                else -> Result.failure(Exception())
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -48,10 +48,16 @@ class ConversionRepository @Inject constructor(private val fixerApi: FixerApi) {
         return try {
             // Get server response
             val serverResponse = fixerApi.getHistory(date, base, symbols)
-            // Extract date and rate from response
-            val historicalRate =
-                HistoricalRate(serverResponse.rates.values.first())
-            Result.success(historicalRate)
+            when {
+                !serverResponse.rates.isNullOrEmpty() -> {
+                    // Extract date and rate from response
+                    val historicalRate =
+                        HistoricalRate(serverResponse.rates.values.first())
+                    Result.success(historicalRate)
+                }
+                serverResponse.error != null -> Result.failure(Exception(serverResponse.error.info))
+                else -> Result.failure(Exception())
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }

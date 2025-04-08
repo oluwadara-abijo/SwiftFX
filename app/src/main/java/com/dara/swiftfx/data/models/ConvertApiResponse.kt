@@ -5,9 +5,10 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ConvertApiResponse(
     val success: Boolean,
-    val timestamp: Long,
+    val timestamp: Long? = null,
     val historical: Boolean? = null,
-    val base: String,
-    val date: String,
-    val rates: Map<String, Float>
+    val base: String? = null,
+    val date: String? = null,
+    val rates: Map<String, Float>? = null,
+    val error: FixerError? = null
 )
