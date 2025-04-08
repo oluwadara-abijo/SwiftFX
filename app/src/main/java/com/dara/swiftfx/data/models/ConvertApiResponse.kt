@@ -6,6 +6,7 @@ import kotlinx.serialization.Serializable
 data class ConvertApiResponse(
     val success: Boolean,
     val timestamp: Long,
+    val historical: Boolean? = null,
     val base: String,
     val date: String,
     val rates: Map<String, Float>

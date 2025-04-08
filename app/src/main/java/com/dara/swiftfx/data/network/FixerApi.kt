@@ -3,6 +3,7 @@ package com.dara.swiftfx.data.network
 import com.dara.swiftfx.data.models.ConvertApiResponse
 import com.dara.swiftfx.data.models.SymbolsApiResponse
 import retrofit2.http.GET
+import retrofit2.http.Path
 import retrofit2.http.Query
 
 interface FixerApi {
@@ -12,6 +13,13 @@ interface FixerApi {
 
     @GET("latest")
     suspend fun getExchangeRate(
+        @Query("base") base: String,
+        @Query("symbols") symbols: String
+    ): ConvertApiResponse
+
+    @GET("{date}")
+    suspend fun getHistory(
+        @Path("date") date: String,
         @Query("base") base: String,
         @Query("symbols") symbols: String
     ): ConvertApiResponse
