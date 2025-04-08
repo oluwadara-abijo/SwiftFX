@@ -10,4 +10,6 @@ data class ConversionUiState(
     val timestamp: Long? = null,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
+    val historyDates: List<String> = listOf(),
+    val historyRates: List<Double> = listOf()
 )

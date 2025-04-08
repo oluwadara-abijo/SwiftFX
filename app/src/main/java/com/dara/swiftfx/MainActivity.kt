@@ -25,7 +25,7 @@ class MainActivity : ComponentActivity() {
                 Scaffold(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(vertical = 32.dp, horizontal = 24.dp)
+                        .padding(vertical = 32.dp)
                 ) { innerPadding ->
                     ConversionScreen(modifier = Modifier.padding(innerPadding))
                 }

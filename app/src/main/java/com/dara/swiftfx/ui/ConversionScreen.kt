@@ -1,14 +1,13 @@
 package com.dara.swiftfx.ui
 
+import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Arrangement.Absolute.SpaceBetween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -19,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Button
@@ -58,7 +58,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.dara.swiftfx.R
 import com.dara.swiftfx.ui.theme.BlueText
 import com.dara.swiftfx.ui.theme.GreenAccent
-import com.dara.swiftfx.utils.formatTimestamp
+import com.dara.swiftfx.utils.formatTimestampToUtc
 
 @Composable
 fun ConversionScreen(modifier: Modifier) {
@@ -66,15 +66,14 @@ fun ConversionScreen(modifier: Modifier) {
     val uiState by viewModel.uiState
     val context = LocalContext.current
 
-    Box(Modifier.fillMaxWidth()) {
+    Box(Modifier.fillMaxSize()) {
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .scrollable(
-                    rememberScrollState(),
-                    orientation = Orientation.Vertical,
-                )
                 .alpha(if (uiState.isLoading) 0.5f else 1f)
+                .verticalScroll(
+                    rememberScrollState(),
+                )
         ) {
             Toolbar()
             HeaderText()
@@ -87,48 +86,13 @@ fun ConversionScreen(modifier: Modifier) {
             CurrencyRow(
                 currencies = uiState.currencies,
                 onCurrencyToSelected = { viewModel.updateCurrencyTo(it) })
-            Button(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 32.dp),
-                enabled = (uiState.amountFrom.isNotBlank() && uiState.selectedCurrencyTo.isNotBlank()),
-                onClick = {
-                    val (isValid, errorMessage) = isValidAmount(uiState.amountFrom)
-                    if (isValid) {
-                        viewModel.getExchangeRate(
-                            uiState.selectedCurrencyFrom,
-                            uiState.selectedCurrencyTo
-                        )
-                    } else {
-                        Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
-                    }
-                },
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = GreenAccent)
-            ) {
-                Text(stringResource(R.string.convert))
-            }
+            ConvertButton(uiState, viewModel, context)
             if (uiState.timestamp != null) {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(top = 16.dp),
-                    verticalAlignment = CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Text(
-                        text = stringResource(
-                            R.string.mid_market_exchange_rate,
-                            formatTimestamp(uiState.timestamp)
-                        ),
-                        color = BlueText,
-                        textDecoration = TextDecoration.Underline,
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.bodyMedium
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Icon(Icons.Default.Info, contentDescription = null, tint = LightGray)
-                }
+                RateAtTimeText(uiState.timestamp)
+            }
+            Spacer(Modifier.height(24.dp))
+            if (uiState.historyDates.isNotEmpty() && uiState.historyRates.isNotEmpty()) {
+                HistoryChart(uiState.historyDates, uiState.historyRates)
             }
         }
         if (uiState.isLoading) {
@@ -143,14 +107,71 @@ fun ConversionScreen(modifier: Modifier) {
 }
 
 @Composable
+private fun RateAtTimeText(timestamp: Long?) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(top = 16.dp),
+        verticalAlignment = CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Text(
+            text = stringResource(
+                R.string.mid_market_exchange_rate,
+                formatTimestampToUtc(timestamp)
+            ),
+            color = BlueText,
+            textDecoration = TextDecoration.Underline,
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.bodyMedium
+        )
+        Spacer(Modifier.width(8.dp))
+        Icon(Icons.Default.Info, contentDescription = null, tint = LightGray)
+    }
+}
+
+@Composable
+private fun ConvertButton(
+    uiState: ConversionUiState,
+    viewModel: ConversionViewModel,
+    context: Context
+) {
+    Button(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp),
+        enabled = (uiState.amountFrom.isNotBlank() && uiState.selectedCurrencyTo.isNotBlank()),
+        onClick = {
+            val (isValid, errorMessage) = isValidAmount(uiState.amountFrom)
+            if (isValid) {
+                viewModel.getExchangeRate(
+                    uiState.selectedCurrencyFrom,
+                    uiState.selectedCurrencyTo
+                )
+            } else {
+                Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
+            }
+        },
+        shape = RoundedCornerShape(8.dp),
+        contentPadding = PaddingValues(vertical = 16.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = GreenAccent)
+    ) {
+        Text(stringResource(R.string.convert), style = MaterialTheme.typography.titleLarge)
+    }
+}
+
+@Composable
 fun Toolbar() {
     Row(
-        Modifier.fillMaxWidth(),
+        Modifier
+            .fillMaxWidth()
+            .padding(end = 24.dp),
         verticalAlignment = CenterVertically,
-        horizontalArrangement = SpaceBetween
+        horizontalArrangement = Arrangement.SpaceBetween
     ) {
         IconButton(
             onClick = {},
+            modifier = Modifier.padding(start = 12.dp)
         ) {
             Icon(
                 painterResource(R.drawable.ic_menu),
@@ -169,7 +190,7 @@ fun Toolbar() {
 @Composable
 fun HeaderText() {
     Row(
-        Modifier.padding(top = 48.dp),
+        Modifier.padding(vertical = 48.dp, horizontal = 24.dp),
         verticalAlignment = Alignment.Bottom
     ) {
         Text(
@@ -195,7 +216,7 @@ fun AmountColumn(
     Column(
         Modifier
             .fillMaxWidth()
-            .padding(top = 32.dp)
+            .padding(horizontal = 24.dp)
     ) {
         AmountFromTextField(
             currency = currencyFrom,
@@ -262,7 +283,7 @@ fun CurrencyRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(top = 24.dp),
+            .padding(24.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = CenterVertically
     ) {
