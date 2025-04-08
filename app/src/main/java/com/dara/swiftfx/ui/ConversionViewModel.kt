@@ -29,17 +29,17 @@ class ConversionViewModel @Inject constructor(
     }
 
     private fun getSymbols() {
-        updateState(isLoading = true)
+        updateState(isLoadingConversion = true)
 
         viewModelScope.launch {
             val result = repository.getSymbols()
             result.fold(
                 onSuccess = { symbolsList ->
-                    updateState(symbols = symbolsList, isLoading = false)
+                    updateState(symbols = symbolsList, isLoadingConversion = false)
                 },
                 onFailure = { exception ->
                     updateState(
-                        isLoading = false,
+                        isLoadingConversion = false,
                         errorMessage = errorHandler.getErrorMessage(exception)
                     )
                 })
@@ -47,26 +47,25 @@ class ConversionViewModel @Inject constructor(
     }
 
     fun getExchangeRate(base: String, symbols: String) {
-        updateState(isLoading = true)
+        updateState(isLoadingConversion = true)
 
         viewModelScope.launch {
             val result = repository.getExchangeRate(base, symbols)
             result.fold(
                 onSuccess = { response ->
                     updateState(
-                        exchangeRate = response.rates.values.first(),
+                        exchangeRate = response.rates!!.values.first(),
                         timestamp = response.timestamp,
-                        isLoading = false
+                        isLoadingConversion = false
                     )
                     updateAmountTo(
                         amount = (uiState.value.exchangeRate?.times(uiState.value.amountFrom.toFloat())
                             .toString()),
                     )
-                    getHistoricalExchangeRates(base, symbols)
                 },
                 onFailure = { exception ->
                     updateState(
-                        isLoading = false,
+                        isLoadingConversion = false,
                         errorMessage = errorHandler.getErrorMessage(exception)
                     )
                 })
@@ -89,7 +88,7 @@ class ConversionViewModel @Inject constructor(
                         Pair(formattedDate, response.rate.toDouble())
                     }.onFailure { exception ->
                         updateState(
-                            isLoading = false,
+                            isLoadingConversion = false,
                             errorMessage = errorHandler.getErrorMessage(exception)
                         )
                         return@async null
@@ -108,41 +107,23 @@ class ConversionViewModel @Inject constructor(
             updateState(
                 historyDates = historicalDates,
                 historyRates = historicalRates,
-                isLoading = false
+                isLoadingConversion = false
             )
         } else {
             updateState(
-                isLoading = false,
+                isLoadingConversion = false,
                 errorMessage = "Failed to fetch historical data"
             )
         }
-
-        // Get historical rates for each date
-//        for (date in historicalDatesForServer) {
-//            historicalDatesForDisplay.add(formatDateToDayMonth(date))
-//            viewModelScope.launch {
-//                val result = repository.getExchangeRateHistory(date, base, symbols)
-//                result.fold(
-//                    onSuccess = { response ->
-//                        historicalRates.add(response.rate.toDouble())
-//                    },
-//                    onFailure = { exception ->
-//                        updateState(
-//                            isLoading = false,
-//                            errorMessage = errorHandler.getErrorMessage(exception)
-//                        )
-//                    })
-//            }
-//        }
-//        updateState(
-//            historyDates = historicalDatesForDisplay,
-//            historyRates = historicalRates,
-//            isLoading = false
-//        )
     }
 
     fun updateCurrencyTo(currency: String) {
-        updateState(selectedCurrencyTo = currency)
+        updateState(selectedCurrencyTo = currency, isLoadingGraph = true)
+        viewModelScope.launch {
+            // Get historical rates to update graph data
+            getHistoricalExchangeRates(uiState.value.selectedCurrencyFrom, currency)
+            updateState(isLoadingGraph = false)
+        }
     }
 
     fun updateAmountFrom(amount: String) {
@@ -161,10 +142,12 @@ class ConversionViewModel @Inject constructor(
         amountTo: String? = null,
         exchangeRate: Float? = null,
         timestamp: Long? = null,
-        isLoading: Boolean? = null,
+        isLoadingConversion: Boolean? = null,
+        isLoadingGraph: Boolean? = null,
         errorMessage: String? = null,
         historyDates: List<String>? = null,
         historyRates: List<Double>? = null,
+        hasChangedCurrency: Boolean? = null,
     ) {
         _uiState.value = _uiState.value.copy(
             currencies = symbols ?: _uiState.value.currencies,
@@ -173,11 +156,12 @@ class ConversionViewModel @Inject constructor(
             amountFrom = amountFrom ?: _uiState.value.amountFrom,
             amountTo = amountTo ?: _uiState.value.amountTo,
             timestamp = timestamp ?: _uiState.value.timestamp,
-            isLoading = isLoading ?: _uiState.value.isLoading,
+            isLoadingConversion = isLoadingConversion ?: _uiState.value.isLoadingConversion,
+            isLoadingGraph = isLoadingGraph ?: _uiState.value.isLoadingGraph,
             errorMessage = errorMessage ?: _uiState.value.errorMessage,
             historyDates = historyDates ?: _uiState.value.historyDates,
             historyRates = historyRates ?: _uiState.value.historyRates,
-
-            )
+            hasChangedCurrency = hasChangedCurrency ?: _uiState.value.hasChangedCurrency,
+        )
     }
 }

@@ -3,6 +3,7 @@ package com.dara.swiftfx.ui
 import androidx.compose.animation.core.EaseInOutCubic
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -10,10 +11,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color.Companion.Red
 import androidx.compose.ui.graphics.Color.Companion.Transparent
@@ -21,6 +24,7 @@ import androidx.compose.ui.graphics.Color.Companion.White
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration.Companion.Underline
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.dara.swiftfx.ui.theme.BlueDark
 import com.dara.swiftfx.ui.theme.GraphBlue
@@ -37,7 +41,8 @@ import ir.ehsannarmani.compose_charts.models.ZeroLineProperties
 @Composable
 fun HistoryChart(
     dates: List<String>,
-    rates: List<Double>
+    rates: List<Double>,
+    isLoading: Boolean
 ) {
     Column(
         Modifier
@@ -49,6 +54,16 @@ fun HistoryChart(
             .padding(vertical = 32.dp, horizontal = 24.dp)
 
     ) {
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxHeight()
+                    .align(Alignment.CenterHorizontally),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = White)
+            }
+        }
         LineChart(
             modifier = Modifier.fillMaxHeight(0.7f),
             data = remember {
@@ -85,4 +100,5 @@ fun HistoryChart(
             textDecoration = Underline
         )
     }
+
 }

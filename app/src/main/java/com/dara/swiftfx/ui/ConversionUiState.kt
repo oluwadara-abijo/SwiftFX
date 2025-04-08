@@ -8,8 +8,10 @@ data class ConversionUiState(
     val amountFrom: String = "",
     val exchangeRate: Float? = null,
     val timestamp: Long? = null,
-    val isLoading: Boolean = false,
+    val isLoadingConversion: Boolean = false,
+    val isLoadingGraph: Boolean = false,
     val errorMessage: String? = null,
     val historyDates: List<String> = listOf(),
-    val historyRates: List<Double> = listOf()
+    val historyRates: List<Double> = listOf(),
+    val hasChangedCurrency: Boolean = false
 )

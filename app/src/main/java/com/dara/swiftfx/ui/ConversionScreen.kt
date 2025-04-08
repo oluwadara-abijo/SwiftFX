@@ -70,7 +70,7 @@ fun ConversionScreen(modifier: Modifier) {
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .alpha(if (uiState.isLoading) 0.5f else 1f)
+                .alpha(if (uiState.isLoadingConversion) 0.5f else 1f)
                 .verticalScroll(
                     rememberScrollState(),
                 )
@@ -92,10 +92,12 @@ fun ConversionScreen(modifier: Modifier) {
             }
             Spacer(Modifier.height(24.dp))
             if (uiState.historyDates.isNotEmpty() && uiState.historyRates.isNotEmpty()) {
-                HistoryChart(uiState.historyDates, uiState.historyRates)
+                HistoryChart(
+                    uiState.historyDates, uiState.historyRates, uiState.isLoadingGraph
+                )
             }
         }
-        if (uiState.isLoading) {
+        if (uiState.isLoadingConversion) {
             CircularProgressIndicator(
                 modifier = Modifier.align(Alignment.Center)
             )
