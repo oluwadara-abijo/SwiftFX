@@ -6,12 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.dara.swiftfx.data.ConversionRepository
 import com.dara.swiftfx.data.network.utils.ErrorHandler
-import com.dara.swiftfx.utils.formatDateToDayMonth
-import com.dara.swiftfx.utils.getWeeklyDates
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -25,105 +20,32 @@ class ConversionViewModel @Inject constructor(
     val uiState: State<ConversionUiState> = _uiState
 
     init {
-        getSymbols()
+        getCurrencies()
     }
 
-    private fun getSymbols() {
+    private fun getCurrencies() {
         updateState(isLoadingConversion = true)
 
         viewModelScope.launch {
-            val result = repository.getSymbols()
+            val result = repository.getCurrencies()
             result.fold(
                 onSuccess = { symbolsList ->
-                    updateState(symbols = symbolsList, isLoadingConversion = false)
+                    updateState(currencies = symbolsList)
                 },
                 onFailure = { exception ->
                     updateState(
-                        isLoadingConversion = false,
                         errorMessage = errorHandler.getErrorMessage(exception)
                     )
                 })
         }
     }
 
-    fun getExchangeRate(base: String, symbols: String) {
-        updateState(isLoadingConversion = true)
-
-        viewModelScope.launch {
-            val result = repository.getExchangeRate(base, symbols)
-            result.fold(
-                onSuccess = { response ->
-                    updateState(
-                        exchangeRate = response.rates!!.values.first(),
-                        timestamp = response.timestamp,
-                        isLoadingConversion = false
-                    )
-                    updateAmountTo(
-                        amount = (uiState.value.exchangeRate?.times(uiState.value.amountFrom.toFloat())
-                            .toString()),
-                    )
-                },
-                onFailure = { exception ->
-                    updateState(
-                        isLoadingConversion = false,
-                        errorMessage = errorHandler.getErrorMessage(exception)
-                    )
-                })
-        }
-    }
-
-    suspend fun getHistoricalExchangeRates(base: String, symbols: String) {
-        // Get the dates for which to fetch historical data
-        val historicalDatesForServer = getWeeklyDates()
-
-        val historicalDatesForDisplay = mutableListOf<String>()
-        val historicalRatePairs = mutableListOf<Pair<String, Double>>()
-
-        coroutineScope {
-            val deferredResults = historicalDatesForServer.map { date ->
-                async {
-                    val formattedDate = formatDateToDayMonth(date)
-                    historicalDatesForDisplay.add(formattedDate)
-                    repository.getExchangeRateHistory(date, base, symbols).map { response ->
-                        Pair(formattedDate, response.rate.toDouble())
-                    }.onFailure { exception ->
-                        updateState(
-                            isLoadingConversion = false,
-                            errorMessage = errorHandler.getErrorMessage(exception)
-                        )
-                        return@async null
-                    }.getOrNull()
-                }
-            }
-            val results = deferredResults.awaitAll().filterNotNull()
-            results.forEach { historicalRatePairs.add(it) }
-        }
-
-        // Process the results after all data has been fetched.
-        if (historicalRatePairs.isNotEmpty()) {
-            // Extract dates and rates from the pairs.
-            val historicalDates = historicalRatePairs.map { it.first }
-            val historicalRates = historicalRatePairs.map { it.second }
-            updateState(
-                historyDates = historicalDates,
-                historyRates = historicalRates,
-                isLoadingConversion = false
-            )
-        } else {
-            updateState(
-                isLoadingConversion = false,
-                errorMessage = "Failed to fetch historical data"
-            )
-        }
+    fun updateCurrencyFrom(currency: String) {
+        updateState(selectedCurrencyFrom = currency)
     }
 
     fun updateCurrencyTo(currency: String) {
-        updateState(selectedCurrencyTo = currency, isLoadingGraph = true)
-        viewModelScope.launch {
-            // Get historical rates to update graph data
-            getHistoricalExchangeRates(uiState.value.selectedCurrencyFrom, currency)
-            updateState(isLoadingGraph = false)
-        }
+        updateState(selectedCurrencyTo = currency)
     }
 
     fun updateAmountFrom(amount: String) {
@@ -136,7 +58,8 @@ class ConversionViewModel @Inject constructor(
 
     // Updates the current state of the UI
     private fun updateState(
-        symbols: List<String>? = null,
+        currencies: List<String>? = null,
+        selectedCurrencyFrom: String? = null,
         selectedCurrencyTo: String? = null,
         amountFrom: String? = null,
         amountTo: String? = null,
@@ -150,7 +73,8 @@ class ConversionViewModel @Inject constructor(
         hasChangedCurrency: Boolean? = null,
     ) {
         _uiState.value = _uiState.value.copy(
-            currencies = symbols ?: _uiState.value.currencies,
+            currencies = currencies ?: _uiState.value.currencies,
+            selectedCurrencyFrom = selectedCurrencyFrom ?: _uiState.value.selectedCurrencyFrom,
             selectedCurrencyTo = selectedCurrencyTo ?: _uiState.value.selectedCurrencyTo,
             exchangeRate = exchangeRate ?: _uiState.value.exchangeRate,
             amountFrom = amountFrom ?: _uiState.value.amountFrom,

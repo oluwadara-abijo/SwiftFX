@@ -76,21 +76,29 @@ fun ConversionScreen(modifier: Modifier) {
                 )
         ) {
             Toolbar()
+
             HeaderText()
+
             AmountColumn(
                 currencyFrom = uiState.selectedCurrencyFrom,
                 currencyTo = uiState.selectedCurrencyTo,
                 amountTo = uiState.amountTo,
                 onAmountFromChanged = { viewModel.updateAmountFrom(it) },
             )
+
             CurrencyRow(
                 currencies = uiState.currencies,
+                onCurrencyFromSelected = { viewModel.updateCurrencyFrom(it) },
                 onCurrencyToSelected = { viewModel.updateCurrencyTo(it) })
+
             ConvertButton(uiState, viewModel, context)
+
             if (uiState.timestamp != null) {
                 RateAtTimeText(uiState.timestamp)
             }
+
             Spacer(Modifier.height(24.dp))
+
             if (uiState.historyDates.isNotEmpty() && uiState.historyRates.isNotEmpty()) {
                 HistoryChart(
                     uiState.historyDates, uiState.historyRates, uiState.isLoadingGraph
@@ -144,12 +152,15 @@ private fun ConvertButton(
             .padding(24.dp),
         enabled = (uiState.amountFrom.isNotBlank() && uiState.selectedCurrencyTo.isNotBlank()),
         onClick = {
+            Toast.makeText(
+                context,
+                "From - ${uiState.selectedCurrencyFrom} -- To - ${uiState.selectedCurrencyTo}",
+                Toast.LENGTH_SHORT
+            ).show()
+
             val (isValid, errorMessage) = isValidAmount(uiState.amountFrom)
             if (isValid) {
-                viewModel.getExchangeRate(
-                    uiState.selectedCurrencyFrom,
-                    uiState.selectedCurrencyTo
-                )
+                Toast.makeText(context, "Convert", Toast.LENGTH_SHORT).show()
             } else {
                 Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
             }
@@ -279,9 +290,9 @@ fun AmountToTextField(amount: String, currency: String) {
 @Composable
 fun CurrencyRow(
     currencies: List<String>,
+    onCurrencyFromSelected: (String) -> Unit,
     onCurrencyToSelected: (String) -> Unit
 ) {
-    val sortedCurrencies = currencies.sorted()
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -291,9 +302,8 @@ fun CurrencyRow(
     ) {
         Box(modifier = Modifier.weight(1f)) {
             CurrencySpinner(
-                currencies = sortedCurrencies,
-                onCurrencySelected = {},
-                isBaseCurrency = true
+                currencies = currencies,
+                onCurrencySelected = onCurrencyFromSelected,
             )
         }
         Icon(
@@ -303,9 +313,8 @@ fun CurrencyRow(
         )
         Box(modifier = Modifier.weight(1f)) {
             CurrencySpinner(
-                sortedCurrencies,
+                currencies,
                 onCurrencySelected = onCurrencyToSelected,
-                isBaseCurrency = false
             )
         }
     }
@@ -316,7 +325,6 @@ fun CurrencyRow(
 fun CurrencySpinner(
     currencies: List<String>,
     onCurrencySelected: (String) -> Unit,
-    isBaseCurrency: Boolean,
 ) {
     var selectedCurrency by remember { mutableStateOf("") }
     var isDropdownExpanded by remember { mutableStateOf(false) }
@@ -328,7 +336,7 @@ fun CurrencySpinner(
             OutlinedTextField(
                 modifier = Modifier
                     .menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
-                value = if (isBaseCurrency) "EUR" else selectedCurrency,
+                value = selectedCurrency,
                 onValueChange = { },
                 readOnly = true,
                 leadingIcon = {
@@ -338,34 +346,31 @@ fun CurrencySpinner(
                     )
                 },
                 trailingIcon = {
-                    if (!isBaseCurrency) {
-                        if (isDropdownExpanded) Icon(
-                            painterResource(R.drawable.ic_expand_less),
+                    if (isDropdownExpanded) Icon(
+                        painterResource(R.drawable.ic_expand_less),
+                        contentDescription = null
+                    ) else {
+                        Icon(
+                            painterResource(R.drawable.ic_expand_more),
                             contentDescription = null
-                        ) else {
-                            Icon(
-                                painterResource(R.drawable.ic_expand_more),
-                                contentDescription = null
-                            )
-                        }
+                        )
                     }
                 }
 
             )
-            if (!isBaseCurrency)
-                ExposedDropdownMenu(
-                    expanded = isDropdownExpanded,
-                    onDismissRequest = { isDropdownExpanded = false }) {
-                    currencies.forEach { currency ->
-                        DropdownMenuItem(
-                            text = { Text(currency) },
-                            onClick = {
-                                selectedCurrency = currency
-                                isDropdownExpanded = false
-                                onCurrencySelected(currency)
-                            })
-                    }
+            ExposedDropdownMenu(
+                expanded = isDropdownExpanded,
+                onDismissRequest = { isDropdownExpanded = false }) {
+                currencies.forEach { currency ->
+                    DropdownMenuItem(
+                        text = { Text(currency) },
+                        onClick = {
+                            selectedCurrency = currency
+                            isDropdownExpanded = false
+                            onCurrencySelected(currency)
+                        })
                 }
+            }
         }
     }
 }

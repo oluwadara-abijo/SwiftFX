@@ -13,7 +13,6 @@ import retrofit2.Retrofit
 import retrofit2.create
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
-import com.dara.swiftfx.BuildConfig
 
 /**
  * [CoreNetworkModule] is a Dagger Hilt module responsible for providing core network-related
@@ -24,7 +23,7 @@ import com.dara.swiftfx.BuildConfig
  * configurations.
  * - [Json]: A JSON serializer/deserializer for handling JSON data.
  * - [Retrofit]: A type-safe HTTP client for Android and Java, built on top of OkHttp.
- * - [FixerApi]: The Retrofit service interface for the application's API endpoints.
+ * - [OpenExchangeApi]: The Retrofit service interface for the application's API endpoints.
  *
  * It is installed in the [SingletonComponent], making these dependencies available throughout
  * the application.
@@ -46,12 +45,6 @@ internal object CoreNetworkModule {
     @Singleton
     fun providesHttpClient(): OkHttpClient {
         return OkHttpClient.Builder()
-            .addInterceptor {
-                val request = it.request()
-                val url = request.url.newBuilder()
-                    .addQueryParameter("access_key", BuildConfig.FIXER_API_KEY).build()
-                it.proceed(request.newBuilder().url(url).build())
-            }
             .addInterceptor(getLoggingInterceptor())
             .connectTimeout(NETWORK_TIMEOUT, TimeUnit.MINUTES)
             .readTimeout(NETWORK_TIMEOUT, TimeUnit.MINUTES)
@@ -81,9 +74,10 @@ internal object CoreNetworkModule {
     }
 
     @Provides
-    fun providesFixerApi(retrofit: Retrofit): FixerApi = retrofit.create()
+    fun providesOpenExchangeApi(retrofit: Retrofit): OpenExchangeApi = retrofit.create()
+
 
 }
 
-private const val BASE_URL = "https://data.fixer.io/api/"
+private const val BASE_URL = "https://openexchangerates.org/api/"
 private const val NETWORK_TIMEOUT = 30L
