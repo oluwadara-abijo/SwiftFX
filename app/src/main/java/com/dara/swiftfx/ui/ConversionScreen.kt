@@ -293,7 +293,6 @@ fun CurrencyRow(
             CurrencySpinner(
                 currencies = sortedCurrencies,
                 onCurrencySelected = {},
-                isBaseCurrency = true
             )
         }
         Icon(
@@ -305,7 +304,6 @@ fun CurrencyRow(
             CurrencySpinner(
                 sortedCurrencies,
                 onCurrencySelected = onCurrencyToSelected,
-                isBaseCurrency = false
             )
         }
     }
@@ -316,7 +314,7 @@ fun CurrencyRow(
 fun CurrencySpinner(
     currencies: List<String>,
     onCurrencySelected: (String) -> Unit,
-    isBaseCurrency: Boolean,
+//    isBaseCurrency: Boolean,
 ) {
     var selectedCurrency by remember { mutableStateOf("") }
     var isDropdownExpanded by remember { mutableStateOf(false) }
@@ -328,7 +326,7 @@ fun CurrencySpinner(
             OutlinedTextField(
                 modifier = Modifier
                     .menuAnchor(MenuAnchorType.PrimaryNotEditable, true),
-                value = if (isBaseCurrency) "EUR" else selectedCurrency,
+                value = selectedCurrency,
                 onValueChange = { },
                 readOnly = true,
                 leadingIcon = {
@@ -338,34 +336,31 @@ fun CurrencySpinner(
                     )
                 },
                 trailingIcon = {
-                    if (!isBaseCurrency) {
-                        if (isDropdownExpanded) Icon(
-                            painterResource(R.drawable.ic_expand_less),
+                    if (isDropdownExpanded) Icon(
+                        painterResource(R.drawable.ic_expand_less),
+                        contentDescription = null
+                    ) else {
+                        Icon(
+                            painterResource(R.drawable.ic_expand_more),
                             contentDescription = null
-                        ) else {
-                            Icon(
-                                painterResource(R.drawable.ic_expand_more),
-                                contentDescription = null
-                            )
-                        }
+                        )
                     }
                 }
 
             )
-            if (!isBaseCurrency)
-                ExposedDropdownMenu(
-                    expanded = isDropdownExpanded,
-                    onDismissRequest = { isDropdownExpanded = false }) {
-                    currencies.forEach { currency ->
-                        DropdownMenuItem(
-                            text = { Text(currency) },
-                            onClick = {
-                                selectedCurrency = currency
-                                isDropdownExpanded = false
-                                onCurrencySelected(currency)
-                            })
-                    }
+            ExposedDropdownMenu(
+                expanded = isDropdownExpanded,
+                onDismissRequest = { isDropdownExpanded = false }) {
+                currencies.forEach { currency ->
+                    DropdownMenuItem(
+                        text = { Text(currency) },
+                        onClick = {
+                            selectedCurrency = currency
+                            isDropdownExpanded = false
+                            onCurrencySelected(currency)
+                        })
                 }
+            }
         }
     }
 }

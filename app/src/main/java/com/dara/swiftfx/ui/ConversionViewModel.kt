@@ -13,6 +13,7 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import java.text.DecimalFormat
 import javax.inject.Inject
 
 @HiltViewModel
@@ -58,10 +59,13 @@ class ConversionViewModel @Inject constructor(
                         timestamp = response.timestamp,
                         isLoadingConversion = false
                     )
-                    updateAmountTo(
-                        amount = (uiState.value.exchangeRate?.times(uiState.value.amountFrom.toFloat())
-                            .toString()),
+                    val result = convertCurrency(
+                        uiState.value.amountFrom.toDouble(),
+                        uiState.value.selectedCurrencyFrom,
+                        uiState.value.selectedCurrencyTo,
+                        response.rates
                     )
+                    updateAmountTo(amount = result)
                 },
                 onFailure = { exception ->
                     updateState(
@@ -70,6 +74,24 @@ class ConversionViewModel @Inject constructor(
                     )
                 })
         }
+    }
+
+    private fun convertCurrency(
+        amount: Double,
+        from: String,
+        to: String,
+        rates: Map<String, Float>
+    ): String {
+        val fromRate = rates[from] ?: error("Rate for $from not found")
+        val toRate = rates[to] ?: error("Rate for $to not found")
+
+        // Convert to EUR, then to target
+        val amountInEUR = amount / fromRate
+        val result = amountInEUR * toRate
+
+        // Format with commas and 2 decimal places
+        val formatter = DecimalFormat("#,##0.00")
+        return formatter.format(result)
     }
 
     suspend fun getHistoricalExchangeRates(base: String, symbols: String) {
