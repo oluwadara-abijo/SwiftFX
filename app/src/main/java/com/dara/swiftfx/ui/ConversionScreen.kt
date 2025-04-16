@@ -152,15 +152,9 @@ private fun ConvertButton(
             .padding(24.dp),
         enabled = (uiState.amountFrom.isNotBlank() && uiState.selectedCurrencyTo.isNotBlank()),
         onClick = {
-            Toast.makeText(
-                context,
-                "From - ${uiState.selectedCurrencyFrom} -- To - ${uiState.selectedCurrencyTo}",
-                Toast.LENGTH_SHORT
-            ).show()
-
             val (isValid, errorMessage) = isValidAmount(uiState.amountFrom)
             if (isValid) {
-                Toast.makeText(context, "Convert", Toast.LENGTH_SHORT).show()
+                viewModel.getRatesAndConvert()
             } else {
                 Toast.makeText(context, errorMessage, Toast.LENGTH_SHORT).show()
             }

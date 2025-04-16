@@ -8,6 +8,10 @@ import com.dara.swiftfx.data.ConversionRepository
 import com.dara.swiftfx.data.network.utils.ErrorHandler
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import java.math.BigDecimal
+import java.math.RoundingMode
+import java.text.DecimalFormat
+import java.util.Locale
 import javax.inject.Inject
 
 @HiltViewModel
@@ -30,7 +34,7 @@ class ConversionViewModel @Inject constructor(
             val result = repository.getCurrencies()
             result.fold(
                 onSuccess = { symbolsList ->
-                    updateState(currencies = symbolsList)
+                    updateState(currencies = symbolsList, isLoadingConversion = false)
                 },
                 onFailure = { exception ->
                     updateState(
@@ -38,6 +42,52 @@ class ConversionViewModel @Inject constructor(
                     )
                 })
         }
+    }
+
+    fun getRatesAndConvert() {
+        updateState(isLoadingConversion = true)
+
+        viewModelScope.launch {
+            val result = repository.getLatestRates()
+            result.fold(
+                onSuccess = { rates ->
+                    if (!rates.isNullOrEmpty()) {
+                        val convertedAmount = convertCurrency(
+                            uiState.value.amountFrom.toDouble(),
+                            uiState.value.selectedCurrencyFrom,
+                            uiState.value.selectedCurrencyTo,
+                            rates
+                        )
+                        updateState(
+                            amountTo = convertedAmount.toString(),
+                            isLoadingConversion = false
+                        )
+                    }
+                },
+                onFailure = { exception ->
+                    updateState(
+                        errorMessage = errorHandler.getErrorMessage(exception)
+                    )
+                })
+        }
+    }
+
+    private fun convertCurrency(
+        amount: Double,
+        from: String,
+        to: String,
+        rates: Map<String, Float>
+    ): String {
+        val fromRate = rates[from] ?: error("Rate for $from not found")
+        val toRate = rates[to] ?: error("Rate for $to not found")
+
+        // Convert to USD, then to target
+        val amountInUSD = amount / fromRate
+        val result = amountInUSD * toRate
+
+        // Format with commas and 2 decimal places
+        val formatter = DecimalFormat("#,##0.00")
+        return formatter.format(result)
     }
 
     fun updateCurrencyFrom(currency: String) {

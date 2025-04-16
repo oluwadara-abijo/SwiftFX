@@ -19,6 +19,7 @@ if (localPropertiesFile.exists()) {
 
 // Get API key from local.properties
 val fixerApiKey: String = localProperties.getProperty("FixerApiKey", "")
+val openExchangeAppId: String = localProperties.getProperty("OpenExchangeAppId", "")
 
 android {
     namespace = "com.dara.swiftfx"
@@ -34,6 +35,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         buildConfigField ("String", "FIXER_API_KEY", "\"${fixerApiKey}\"")
+        buildConfigField ("String", "OPEN_EXCHANGE_APP_ID", "\"${openExchangeAppId}\"")
 
     }
 
